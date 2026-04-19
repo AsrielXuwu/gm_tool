@@ -1,0 +1,99 @@
+name: GM Tool Build and Release
+
+on:
+  push:
+    branches: [ "main" ]
+    # 推荐：当推送 "v1.0.0" 这类标签时自动触发
+    tags: [ "v*.*.*" ] 
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [windows-latest, macos-15-intel, macos-14]
+        include:
+          - os: windows-latest
+            artifact_name: GMTool-Windows
+            output_name: GMTool.exe
+          - os: macos-15-intel
+            artifact_name: GMTool-macOS-Intel
+            output_name: GMTool.app
+          - os: macos-14
+            artifact_name: GMTool-macOS-AppleSilicon
+            output_name: GMTool.app
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyinstaller openpyxl openai base64
+
+    - name: Build with PyInstaller (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        pyinstaller --noconsole --onefile --name "GM_Tool" gm_tool.pyw
+
+    - name: Build with PyInstaller (macOS)
+      if: startsWith(matrix.os, 'macos')
+      run: |
+        pyinstaller --windowed --name "GM_Tool" gm_tool.pyw
+
+    # 修改点 1：手动把 macOS 的 .app 压成 zip，并规范不同平台的文件名
+    - name: Prepare Artifacts
+      shell: bash
+      run: |
+        mkdir -p release_dist
+        if [[ "${{ matrix.os }}" == windows* ]]; then
+          # Windows 拷贝 exe，重命名为带系统后缀的名字，方便用户下载区分
+          cp dist/GM_Tool.exe release_dist/${{ matrix.artifact_name }}.exe
+        else
+          # macOS 需要手动打包成 zip，GitHub Release 只能接收文件
+          cd dist
+          zip -r ../release_dist/${{ matrix.artifact_name }}.zip GM_Tool.app
+          cd ..
+        fi
+
+    - name: Upload artifact to Actions
+      uses: actions/upload-artifact@v4
+      with:
+        # 为每个平台的产物指定独立的临时名称
+        name: raw-${{ matrix.artifact_name }}
+        path: release_dist/
+
+  # 修改点 2：新增独立的 release 任务进行汇总发布
+  release:
+    name: Create GitHub Release
+    needs: build # 必须等待上面的 build 矩阵全部运行成功才开始
+    runs-on: ubuntu-latest
+    # 避免每次 push main 都发布，设定仅在推送 Tag 或手动点击时发布
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: write # 赋予 GitHub Actions 创建 Release 的写权限
+
+    steps:
+      - name: Download all built artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: raw-* # 下载所有前缀为 raw- 的产物
+          path: final-artifacts
+          merge-multiple: true # v4 新特性：把所有下载的文件合并丢进同一个文件夹里
+
+      - name: Publish to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          files: final-artifacts/*
+          generate_release_notes: true # 自动根据 commit 记录生成更新日志
+          # 如果是手动触发没有 tag，默认覆盖更新 "latest-build" 这个 release
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || 'latest-build' }}
