@@ -15,13 +15,13 @@ jobs:
         include:
           - os: windows-latest
             artifact_name: GMTool-Windows
-            output_name: GMTool.exe
+            output_name: GM_Tool.exe
           - os: macos-15-intel
             artifact_name: GMTool-macOS-Intel
-            output_name: GMTool.app
+            output_name: GM_Tool.app
           - os: macos-14
             artifact_name: GMTool-macOS-AppleSilicon
-            output_name: GMTool.app
+            output_name: GM_Tool.app
 
     runs-on: ${{ matrix.os }}
 
