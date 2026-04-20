@@ -188,7 +188,7 @@ class LQA_App:
         self.row_start.insert(0, "2")
         self.row_start.grid(row=1, column=3, padx=5, sticky="w", pady=5)
 
-        self.var_with_source = tk.BooleanVar(value=True)
+        self.var_with_source = tk.BooleanVar(value=False)
         ttk.Checkbutton(frame_col, text="双语模式 (参考原文)", variable=self.var_with_source).grid(row=1, column=4, columnspan=2, sticky="w", padx=(10, 0))
 
         # --- 3. 工作表 (Sheet) 过滤 ---
@@ -458,14 +458,14 @@ You are an expert in subtitle localization and Language Quality Assurance (LQA).
 - Reqs: {additional_context}
 # JSON Fields:
 i: id
-s: Source
-t: Translation
-r: revisedTranslation
+s: Source text (Original)
+t: Translation (To be reviewed)
+r: Revised translation (Final localized output)
 # Format:
-In: [{{\"i\":\"1\",\"s\":\"Hi\",\"t\":\"哈喽\"}}]
+In: [{{\"i\":\"1\",\"s\":\"Hello\",\"t\":\"哈楼\"}}]
 Out: {{\"result\":[{{\"i\":\"1\",\"r\":\"你好\"}}]}}
 # Task:
-Fix spelling/grammar/other issues in `t` using `s` as context. Return ONLY valid minified JSON.
+STRICT BILINGUAL REVIEW: Deeply compare `t` against `s`. Fix ALL mistranslations, omissions, unidiomatic expressions, spelling, and grammar errors in `t` to ensure accurate localization. Return ONLY valid minified JSON.
 """
         else:
             sys_prompt = f"""# System Role:
@@ -476,13 +476,13 @@ You are an expert in subtitle localization and Language Quality Assurance (LQA).
 - Reqs: {additional_context}
 # JSON Fields:
 i: id
-t: Translation
-r: revisedTranslation
+t: Translation (To be reviewed)
+r: Revised translation (Fixed output)
 # Format:
-In: [{{\"i\":\"1\",\"t\":\"哈喽\"}}]
-Out: {{\"result\":[{{\"i\":\"1\",\"r\":\"你好\"}}]}}
+In: [{{\"i\":\"1\",\"t\":\"哈楼\"}}]
+Out: {{\"result\":[{{\"i\":\"1\",\"r\":\"哈喽\"}}]}}
 # Task:
-Fix spelling/grammar/other issues in `t`. Return ONLY valid minified JSON.
+Fix spelling, grammar, unidiomatic expressions in `t` to ensure accurate localization. Return ONLY valid minified JSON.
 """
         return sys_prompt
     
@@ -594,10 +594,13 @@ Fix spelling/grammar/other issues in `t`. Return ONLY valid minified JSON.
                     ep_val = str(ws.cell(row=row, column=c_ep).value or "未分类集数").strip()
                     original_row_values = [ws.cell(row=row, column=c).value for c in range(1, ws.max_column + 1)]
                     
-                    item = {"i": str(row), "t": str(tgt_text)}
+                    # === 调整 JSON 字段拼装顺序，让原文(s)排在译文(t)前面 ===
+                    item = {"i": str(row)}
                     if with_src:
                         src_text = ws.cell(row=row, column=c_src).value
                         item["s"] = str(src_text) if src_text else ""
+                    item["t"] = str(tgt_text)
+                    # =======================================================
                     
                     if ep_val not in episodes_data:
                         episodes_data[ep_val] = []
