@@ -43,14 +43,14 @@ jobs:
     - name: Build with PyInstaller (Windows)
       if: matrix.os == 'windows-latest'
       run: |
-        # 注意：请将 gm_tool.pyw 替换为你真实的 Python 脚本名
-        pyinstaller --noconsole --onefile --name "GM_Tool" gm_tool.pyw
+        # 增加了 tiktoken 相关的 hidden-import 和 copy-metadata 强制打包参数
+        pyinstaller --noconsole --onefile --name "GM_Tool" --copy-metadata tiktoken --hidden-import tiktoken_ext.openai_public --hidden-import tiktoken_ext gm_tool.pyw
 
     - name: Build with PyInstaller (macOS)
       if: startsWith(matrix.os, 'macos')
       run: |
-        # 注意：请将 gm_tool.pyw 替换为你真实的 Python 脚本名
-        pyinstaller --windowed --name "GM_Tool" gm_tool.pyw
+        # 增加了 tiktoken 相关的 hidden-import 和 copy-metadata 强制打包参数
+        pyinstaller --windowed --name "GM_Tool" --copy-metadata tiktoken --hidden-import tiktoken_ext.openai_public --hidden-import tiktoken_ext gm_tool.pyw
 
     - name: Prepare Artifacts
       shell: bash

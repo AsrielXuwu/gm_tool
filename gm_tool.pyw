@@ -240,7 +240,7 @@ class LQA_App:
 
         ttk.Label(frame_ai, text="要求/背景:").grid(row=2, column=0, sticky="nw", pady=5)
         self.context_text = tk.Text(frame_ai, width=65, height=3)
-        self.context_text.insert("1.0", "这通常是短剧的字幕文件，背景是古代仙侠背景。请确保称呼和语气符合设定，修改错别字、不地道的表达和拼写错误，保留专有名词。")
+        self.context_text.insert("1.0", "这通常是短剧的字幕文件，背景是古代仙侠背景。请确保称呼和语气符合设定，修改错别字、不地道的表达、拼写错误和语法错误，使其符合本地化要求，并保留专有名词。")
         self.context_text.grid(row=2, column=1, columnspan=3, padx=5, pady=5)
 
         # --- 6. 操作与日志区 ---
@@ -451,7 +451,7 @@ class LQA_App:
 
         if with_src:
             sys_prompt = f"""# System Role:
-You are a subtitle LQA expert.
+You are an expert in subtitle localization and Language Quality Assurance (LQA).
 # Context:
 - Target Language: {target_lang_name} ({target_lang_code})
 - Continues Rule: {concat_rule}
@@ -465,11 +465,11 @@ r: revisedTranslation
 In: [{{\"i\":\"1\",\"s\":\"Hi\",\"t\":\"哈喽\"}}]
 Out: {{\"result\":[{{\"i\":\"1\",\"r\":\"你好\"}}]}}
 # Task:
-Fix spelling/grammar in `t` using `s` as context. Return ONLY valid minified JSON.
+Fix spelling/grammar/other issues in `t` using `s` as context. Return ONLY valid minified JSON.
 """
         else:
             sys_prompt = f"""# System Role:
-You are a proofreading expert.
+You are an expert in subtitle localization and Language Quality Assurance (LQA).
 # Context:
 - Target Language: {target_lang_name} ({target_lang_code})
 - Continues Rule: {concat_rule}
@@ -482,7 +482,7 @@ r: revisedTranslation
 In: [{{\"i\":\"1\",\"t\":\"哈喽\"}}]
 Out: {{\"result\":[{{\"i\":\"1\",\"r\":\"你好\"}}]}}
 # Task:
-Fix spelling/grammar in `t`. Return ONLY valid minified JSON.
+Fix spelling/grammar/other issues in `t`. Return ONLY valid minified JSON.
 """
         return sys_prompt
     
